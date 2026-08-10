@@ -1,0 +1,69 @@
+services:
+  - type: pserv
+    name: erp-mariadb
+    runtime: image
+    plan: starter
+    image:
+      url: docker.io/library/mariadb:11.8
+    envVars:
+      - key: MARIADB_ROOT_PASSWORD
+        generateValue: true
+      - key: MARIADB_ROOT_HOST
+        value: "%"
+    disk:
+      name: erp-mariadb-data
+      mountPath: /var/lib/mysql
+      sizeGB: 10
+
+  - type: redis
+    name: erp-redis
+    plan: starter
+    ipAllowList: []
+
+  - type: web
+    name: erp-app
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./render/Containerfile
+    dockerContext: ./render
+    healthCheckPath: /api/method/ping
+    disk:
+      name: erp-sites-data
+      mountPath: /home/frappe/frappe-bench/sites
+      sizeGB: 10
+    envVars:
+      - key: SITE_NAME
+        value: erp.production
+      - key: FRAPPE_SITE_NAME_HEADER
+        value: erp.production
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: DB_HOST
+        fromService:
+          type: pserv
+          name: erp-mariadb
+          property: host
+      - key: DB_PORT
+        fromService:
+          type: pserv
+          name: erp-mariadb
+          property: port
+      - key: DB_ROOT_PASSWORD
+        fromService:
+          type: pserv
+          name: erp-mariadb
+          envVarKey: MARIADB_ROOT_PASSWORD
+      - key: REDIS_CACHE
+        fromService:
+          type: redis
+          name: erp-redis
+          property: connectionString
+      - key: REDIS_QUEUE
+        fromService:
+          type: redis
+          name: erp-redis
+          property: connectionString
+      - key: GUNICORN_WORKERS
+        value: "2"
+      - key: GUNICORN_THREADS
+        value: "4"
