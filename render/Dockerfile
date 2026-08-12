@@ -14,6 +14,13 @@ RUN apt-get update \
 RUN mkdir -p /opt/frappe-bench-sites-defaults \
     && cp -a /home/frappe/frappe-bench/sites/. /opt/frappe-bench-sites-defaults/
 
+# frappe's sequence.py assumes MariaDB-native CREATE SEQUENCE/nextval()/SETVAL() support
+# whenever db_type=mariadb, but that's also the db_type used for real MySQL (frappe has no
+# separate "mysql" db_type). Real MySQL doesn't support that syntax at all, so this
+# doctors sequence.py to emulate sequences with a plain table when the server it's
+# actually talking to isn't MariaDB. See render/frappe_sequence_mysql_patch.py.
+COPY frappe_sequence_mysql_patch.py /home/frappe/frappe-bench/apps/frappe/frappe/database/sequence.py
+
 COPY supervisord.conf /etc/supervisor/conf.d/frappe.conf
 COPY render-entrypoint.sh /usr/local/bin/render-entrypoint.sh
 RUN chmod 755 /usr/local/bin/render-entrypoint.sh \
