@@ -24,7 +24,7 @@ services:
     name: erp-app
     runtime: docker
     plan: starter
-    dockerfilePath: ./render/Containerfile
+    dockerfilePath: ./render/Dockerfile
     dockerContext: ./render
     healthCheckPath: /api/method/ping
     disk:
