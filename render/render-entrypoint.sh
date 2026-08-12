@@ -11,16 +11,28 @@ set -e
 
 cd /home/frappe/frappe-bench
 
+echo "Fixing ownership of mounted sites volume..."
+chown -R frappe:frappe sites
+
 echo "Linking baked assets into the sites volume..."
 rm -rf sites/assets
 ln -sf /home/frappe/frappe-bench/assets sites/assets
+chown -h frappe:frappe sites/assets
 
 echo "Waiting for MariaDB at ${DB_HOST}:${DB_PORT}..."
 wait-for-it -t 120 "${DB_HOST}:${DB_PORT}"
 
 if [ ! -f sites/apps.txt ]; then
   ls -1 apps > sites/apps.txt
+  chown frappe:frappe sites/apps.txt
 fi
+
+export DB_HOST DB_PORT DB_ROOT_PASSWORD REDIS_CACHE REDIS_QUEUE SITE_NAME ADMIN_PASSWORD
+
+cat > /tmp/bench-setup.sh <<'SETUP'
+#!/bin/bash
+set -e
+cd /home/frappe/frappe-bench
 
 bench set-config -g db_host "$DB_HOST"
 bench set-config -gp db_port "$DB_PORT"
@@ -41,5 +53,9 @@ else
   echo "Site ${SITE_NAME} already exists, running migrations..."
   bench --site "$SITE_NAME" migrate
 fi
+SETUP
+chmod 755 /tmp/bench-setup.sh
+
+su frappe -c /tmp/bench-setup.sh
 
 exec "$@"

@@ -13,7 +13,6 @@ RUN chmod 755 /usr/local/bin/render-entrypoint.sh \
     && mkdir -p /var/log/supervisor \
     && chown -R frappe:frappe /var/log/supervisor /etc/supervisor
 
-USER frappe
 WORKDIR /home/frappe/frappe-bench
 
 EXPOSE 8080
