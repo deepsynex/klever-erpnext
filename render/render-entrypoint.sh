@@ -11,6 +11,12 @@ set -e
 
 cd /home/frappe/frappe-bench
 
+echo "Restoring any baked sites/ defaults hidden by the mounted volume..."
+for f in /opt/frappe-bench-sites-defaults/*; do
+  name="$(basename "$f")"
+  [ -e "sites/$name" ] || cp -a "$f" "sites/$name"
+done
+
 echo "Fixing ownership of mounted sites volume..."
 chown -R frappe:frappe sites
 
@@ -21,11 +27,6 @@ chown -h frappe:frappe sites/assets
 
 echo "Waiting for MariaDB at ${DB_HOST}:${DB_PORT}..."
 wait-for-it -t 120 "${DB_HOST}:${DB_PORT}"
-
-if [ ! -f sites/apps.txt ]; then
-  ls -1 apps > sites/apps.txt
-  chown frappe:frappe sites/apps.txt
-fi
 
 export DB_HOST DB_PORT DB_ROOT_PASSWORD REDIS_CACHE REDIS_QUEUE SITE_NAME ADMIN_PASSWORD
 
