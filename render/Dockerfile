@@ -31,6 +31,15 @@ COPY frappe_sequence_mysql_patch.py /home/frappe/frappe-bench/apps/frappe/frappe
 COPY frappe_reportview_mysql_patch.py /tmp/frappe_reportview_mysql_patch.py
 RUN python3 /tmp/frappe_reportview_mysql_patch.py && rm /tmp/frappe_reportview_mysql_patch.py
 
+# set_execution_timeout() runs "SET SESSION max_statement_time = N", another
+# MariaDB-only feature that db_type=mariadb also enables against real MySQL,
+# which has no such system variable at all (error 1193). Some call sites (e.g.
+# get_open_count(), hit on every sidebar/list view load) don't guard this call,
+# crashing the request. Patch it into a safe no-op on real MySQL.
+# See render/frappe_execution_timeout_mysql_patch.py.
+COPY frappe_execution_timeout_mysql_patch.py /tmp/frappe_execution_timeout_mysql_patch.py
+RUN python3 /tmp/frappe_execution_timeout_mysql_patch.py && rm /tmp/frappe_execution_timeout_mysql_patch.py
+
 COPY supervisord.conf /etc/supervisor/conf.d/frappe.conf
 COPY render-entrypoint.sh /usr/local/bin/render-entrypoint.sh
 RUN chmod 755 /usr/local/bin/render-entrypoint.sh \
