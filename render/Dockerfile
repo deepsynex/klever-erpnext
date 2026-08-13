@@ -21,6 +21,16 @@ RUN mkdir -p /opt/frappe-bench-sites-defaults \
 # actually talking to isn't MariaDB. See render/frappe_sequence_mysql_patch.py.
 COPY frappe_sequence_mysql_patch.py /home/frappe/frappe-bench/apps/frappe/frappe/database/sequence.py
 
+# frappe.desk.reportview.get_count() prefixes list-view count queries with the
+# MariaDB-only "SET STATEMENT max_statement_time=1 FOR ..." syntax whenever
+# db_type=mariadb - which, per the same db_type limitation above, also fires
+# against real MySQL. Real MySQL rejects that syntax with a 1064 error on
+# nearly every list view, so this patches in a fallback that retries the same
+# count query without the timeout clause when that specific error occurs.
+# See render/frappe_reportview_mysql_patch.py.
+COPY frappe_reportview_mysql_patch.py /tmp/frappe_reportview_mysql_patch.py
+RUN python3 /tmp/frappe_reportview_mysql_patch.py && rm /tmp/frappe_reportview_mysql_patch.py
+
 COPY supervisord.conf /etc/supervisor/conf.d/frappe.conf
 COPY render-entrypoint.sh /usr/local/bin/render-entrypoint.sh
 RUN chmod 755 /usr/local/bin/render-entrypoint.sh \
